@@ -96,7 +96,7 @@
     (mapcat #(meander % max-depth) x)))
 
 (defonce model
-  (atom {:depth 20}))
+  (atom {:island (island 15)}))
 
 (defmulti emit (fn [t & _] t))
 
