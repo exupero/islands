@@ -1,0 +1,16 @@
+.island {
+  stroke: green;
+  stroke-width: 0.5;
+  fill: limegreen;
+  fill-rule: evenodd;
+}
+
+.river {
+  stroke: dodgerblue;
+  stroke-width: 0.5;
+  fill: none;
+}
+
+.water {
+  fill: dodgerblue;
+}
