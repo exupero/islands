@@ -2,6 +2,7 @@
 /lib
 /classes
 /checkouts
+/resources/public/js/*
 pom.xml
 pom.xml.asc
 *.jar
@@ -12,3 +13,5 @@ pom.xml.asc
 .lein-repl-history
 
 js-dev
+
+!/resources/public/js/main.js
