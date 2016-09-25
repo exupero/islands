@@ -101,8 +101,11 @@
 
 (defmulti emit (fn [t & _] t))
 
-(defmethod emit :set-depth [_ v]
-  (swap! model update :depth #(if (< 0 % 21) v %)))
+(defmethod emit :reset-points [_]
+  (swap! model
+    (fn [m]
+      (let [pts (island 20)]
+        (assoc m :island pts #_:rivers #_(rivers pts))))))
 
 (defonce render!
   (let [r (renderer (.getElementById js/document "app"))]
