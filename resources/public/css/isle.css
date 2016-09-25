@@ -1,14 +1,14 @@
+main {
+  max-width: 600px;
+  margin: 1rem auto;
+}
+
 .island {
   stroke: green;
   stroke-width: 0.5;
   fill: limegreen;
   fill-rule: evenodd;
-}
-
-.river {
-  stroke: dodgerblue;
-  stroke-width: 0.5;
-  fill: none;
+  vector-effect: non-scaling-stroke;
 }
 
 .water {

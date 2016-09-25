@@ -2,9 +2,9 @@
   (:require-macros [isle.macros :refer [spy]])
   (:require [clojure.string :as string]
             [vdom.core :refer [renderer]]
+            [vdom.hooks :refer [hook]]
             [isle.math :as m]
-            [isle.svg :as s]
-            [isle.vector :as v]))
+            [isle.svg :as s]))
 
 (enable-console-print!)
 
@@ -21,21 +21,34 @@
   (let [index (zipmap (map :id pts) pts)]
     (filter #(<= (point-depth index %) max-depth) pts)))
 
-(defn ui [emit {:keys [island depth] :as model}]
-  (let [size 500]
-    [:div {}
+(defn bounds [node]
+  (let [box (.getBBox node)]
+    [(.-x box) (.-y box) (.-width box) (.-height box)]))
+
+(defn zoom-to [[x y w h] [x' y' w' h']]
+  (let [s (min (/ w' w) (/ h' h))]
+    (str (s/translate (+ x' (/ w' 2)) (+ y' (/ h' 2)))
+         "scale(" (* s 0.95) ")"
+         (s/translate (- (+ x (/ w 2))) (- (+ y (/ h 2)))))))
+
+(defn bounced [f]
+  (fn [& args]
+    (js/setTimeout #(apply f args) 0)))
+
+(defn ui [emit {:keys [island] :as model}]
+  (let [size 600]
+    [:main {}
      [:div {}
       [:div {}
        [:button {:onclick #(emit :reset-points)} "New Island"]]
       [:div {}
        [:svg {:width size :height size}
         [:rect {:class "water" :width size :height size}]
-        [:g {:transform (s/translate (/ size 2) (/ size 2))}
-         [:path {:class "island"
-                 :d (as-> island x
-                      (filter-to-depth depth x)
-                      (map :position x)
-                      (s/closed-path x))}]]]]]]))
+        [:path {:class "island"
+                :d (as-> island x
+                         (map :position x)
+                         (s/closed-path x))
+                :hookAutoZoom (hook (bounced #(.setAttribute % "transform" (zoom-to (bounds %) [0 0 size size]))))}]]]]]))
 
 (defn loopback [xs]
   (concat xs [(first xs)]))
@@ -104,7 +117,7 @@
 (defmethod emit :reset-points [_]
   (swap! model
     (fn [m]
-      (let [pts (island 20)]
+      (let [pts (island 10)]
         (assoc m :island pts #_:rivers #_(rivers pts))))))
 
 (defonce render!
