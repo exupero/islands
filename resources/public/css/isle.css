@@ -3,6 +3,10 @@ main {
   margin: 1rem auto;
 }
 
+button {
+  margin-bottom: 1rem;
+}
+
 .island {
   stroke: green;
   stroke-width: 0.5;
@@ -13,4 +17,19 @@ main {
 
 .water {
   fill: dodgerblue;
+}
+
+@media print {
+  .island {
+    fill: none;
+    stroke: black;
+  }
+
+  .water {
+    fill: none;
+  }
+
+  .unprinted {
+    display: none;
+  }
 }

@@ -2,15 +2,16 @@
   (:require-macros [isle.macros :refer [spy]])
   (:require [clojure.string :as string]
             [vdom.core :refer [renderer]]
-            [vdom.hooks :refer [hook]]
             [isle.math :as m]
             [isle.svg :as s]))
 
 (enable-console-print!)
 
-(defn bounds [node]
-  (let [box (.getBBox node)]
-    [(.-x box) (.-y box) (.-width box) (.-height box)]))
+(defn bounds [pts]
+  (let [extents (juxt #(apply min %) #(apply max %))
+        [x1 x2] (extents (map first pts))
+        [y1 y2] (extents (map second pts))]
+    [x1 y1 (- x2 x1) (- y2 y1)]))
 
 (defn zoom-to [[x y w h] [x' y' w' h']]
   (let [s (min (/ w' w) (/ h' h))]
@@ -18,24 +19,22 @@
          "scale(" (* s 0.95) ")"
          (s/translate (- (+ x (/ w 2))) (- (+ y (/ h 2)))))))
 
-(defn bounced [f]
-  (fn [& args]
-    (js/setTimeout #(apply f args) 0)))
-
 (defn ui [emit {:keys [island] :as model}]
   (let [size 600]
     [:main {}
      [:div {}
       [:div {}
-       [:button {:onclick #(emit :reset-points)} "New Island"]]
+       [:button
+        {:className "unprinted"
+         :onclick #(emit :reset-points)}
+        "New Island"]]
       [:div {}
        [:svg {:width size :height size}
         [:rect {:class "water" :width size :height size}]
+        (let [pts (map :position island)]
         [:path {:class "island"
-                :d (as-> island x
-                         (map :position x)
-                         (s/closed-path x))
-                :hookAutoZoom (hook (bounced #(.setAttribute % "transform" (zoom-to (bounds %) [0 0 size size]))))}]]]]]))
+                :transform (zoom-to (bounds pts) [0 0 size size])
+                :d (s/closed-path pts)}])]]]]))
 
 (defn loopback [xs]
   (concat xs [(first xs)]))
