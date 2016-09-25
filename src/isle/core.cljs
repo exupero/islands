@@ -8,19 +8,6 @@
 
 (enable-console-print!)
 
-(defn point-type [_ p]
-  (get-in p [:source :type]))
-
-(defn point-depth [pts p]
-  (condp = (get-in p [:source :type])
-    :radial 1
-    :midpoint (inc (max (point-depth pts (pts (get-in p [:source :left])))
-                        (point-depth pts (pts (get-in p [:source :right])))))))
-
-(defn filter-to-depth [max-depth pts]
-  (let [index (zipmap (map :id pts) pts)]
-    (filter #(<= (point-depth index %) max-depth) pts)))
-
 (defn bounds [node]
   (let [box (.getBBox node)]
     [(.-x box) (.-y box) (.-width box) (.-height box)]))
@@ -117,8 +104,7 @@
 (defmethod emit :reset-points [_]
   (swap! model
     (fn [m]
-      (let [pts (island 10)]
-        (assoc m :island pts #_:rivers #_(rivers pts))))))
+      (assoc m :island (island 15)))))
 
 (defonce render!
   (let [r (renderer (.getElementById js/document "app"))]
