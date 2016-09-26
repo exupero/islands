@@ -8,11 +8,6 @@
 
 (enable-console-print!)
 
-(defonce initial-seed
-  (let [s (string/replace js/location.hash #"#" "")]
-    (when-not (string/blank? s)
-      (js/parseInt s))))
-
 (defn bounds [pts]
   (let [extents (juxt #(apply min %) #(apply max %))
         [x1 x2] (extents (map first pts))
@@ -101,10 +96,15 @@
     (partition 2 1 x)
     (mapcat #(meander rng % max-depth) x)))
 
-(defonce model
-  (let [rng (rng/rng (or initial-seed (rand-int 100000000)))]
-    (atom {:rng rng
-           :island (island rng 15)})))
+(defn generate-model []
+  (let [seed (let [s (string/replace js/location.hash #"#" "")]
+               (when-not (string/blank? s)
+                 (js/parseInt s)))
+        rng (rng/rng (or seed (rand-int 100000000)))]
+    {:rng rng
+     :island (island rng 15)}))
+
+(def model (atom (generate-model)))
 
 (defmulti emit (fn [t & _] t))
 
@@ -126,5 +126,9 @@
   (add-watch model :rerender
     (fn [_ _ _ model]
       (render! model))))
+
+(defonce hash-change
+  (.addEventListener js/window "hashchange"
+    #(reset! model (generate-model))))
 
 (render! @model)
