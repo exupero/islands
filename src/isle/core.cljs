@@ -1,11 +1,17 @@
 (ns isle.core
   (:require-macros [isle.macros :refer [spy]])
   (:require [clojure.string :as string]
+            [rand-cljc.core :as rng]
             [vdom.core :refer [renderer]]
             [isle.math :as m]
             [isle.svg :as s]))
 
 (enable-console-print!)
+
+(defonce initial-seed
+  (let [s (string/replace js/location.hash #"#" "")]
+    (when-not (string/blank? s)
+      (js/parseInt s))))
 
 (defn bounds [pts]
   (let [extents (juxt #(apply min %) #(apply max %))
@@ -39,14 +45,14 @@
 (defn loopback [xs]
   (concat xs [(first xs)]))
 
-(defn seed-point []
-  {:offset (rand)
-   :balance (rand)
-   :max-offset (+ 0.05 (rand))})
+(defn seed-point [rng]
+  {:offset (rng/rand rng)
+   :balance (rng/rand rng)
+   :max-offset (+ 0.05 (rng/rand rng))})
 
-(defn circle [n radius]
+(defn circle [rng n radius]
   (for [theta (range 0 m/tau (/ m/tau n))
-        :let [{:keys [offset balance] :as seed} (seed-point)]]
+        :let [{:keys [offset balance] :as seed} (seed-point rng)]]
     (merge seed
            {:id (gensym "radial")
             :position (let [r (* radius (+ 1 (- offset balance)))]
@@ -57,8 +63,8 @@
                      :angle theta
                      :radius radius}})))
 
-(defn midpoint [a b]
-  (let [offset (rand)
+(defn midpoint [rng a b]
+  (let [offset (rng/rand rng)
         max-offset (m/avg (map :max-offset [a b]))
         balance (m/avg (map :balance [a b]))]
     {:id (gensym "midpoint")
@@ -78,32 +84,39 @@
               :right (:id b)}}))
 
 (defn meander
-  ([[left right] max-depth] (meander [left right] max-depth 0))
-  ([[left right] max-depth depth]
+  ([rng [left right] max-depth] (meander rng [left right] max-depth 0))
+  ([rng [left right] max-depth depth]
    (if (and (<= depth max-depth)
             (<= 2 (m/dist (:position left) (:position right))))
-     (let [mid (midpoint left right)]
-       (concat (meander [left mid] (inc depth))
-               (meander [mid right] (inc depth))))
+     (let [mid (midpoint rng left right)]
+       (concat (meander rng [left mid] (inc depth))
+               (meander rng [mid right] (inc depth))))
      [left])))
 
-(defn island [max-depth]
-  (as-> (rand-int 17) x
+(defn island [rng max-depth]
+  (as-> (rng/rand-int rng 17) x
     (+ 3 x)
-    (circle x 100)
+    (circle rng x 100)
     (loopback x)
     (partition 2 1 x)
-    (mapcat #(meander % max-depth) x)))
+    (mapcat #(meander rng % max-depth) x)))
 
 (defonce model
-  (atom {:island (island 15)}))
+  (let [rng (rng/rng (or initial-seed (rand-int 100000000)))]
+    (atom {:rng rng
+           :island (island rng 15)})))
 
 (defmulti emit (fn [t & _] t))
 
 (defmethod emit :reset-points [_]
-  (swap! model
-    (fn [m]
-      (assoc m :island (island 15)))))
+  (let [seed (rand-int 100000000)
+        rng (rng/rng seed)]
+    (set! (.-hash js/location) seed)
+    (swap! model
+      (fn [m]
+        (assoc m
+          :rng rng
+          :island (island rng 15))))))
 
 (defonce render!
   (let [r (renderer (.getElementById js/document "app"))]
