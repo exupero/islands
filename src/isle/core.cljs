@@ -78,23 +78,26 @@
               :left (:id a)
               :right (:id b)}}))
 
-(defn meander
-  ([rng [left right] max-depth] (meander rng [left right] max-depth 0))
-  ([rng [left right] max-depth depth]
-   (if (and (<= depth max-depth)
-            (<= 2 (m/dist (:position left) (:position right))))
-     (let [mid (midpoint rng left right)]
-       (concat (meander rng [left mid] (inc depth))
-               (meander rng [mid right] (inc depth))))
-     [left])))
+(defn subdivide-with [f pred coll max-depth]
+  (if (pos? max-depth)
+    (->> coll
+      (partition 2 1)
+      (mapcat (fn [[left right]]
+                (if (pred left right)
+                  (subdivide-with f pred [left (f left right) right] (dec max-depth))
+                  [left]))))
+    coll))
 
 (defn island [rng max-depth]
   (as-> (rng/rand-int rng 17) x
     (+ 3 x)
     (circle rng x 100)
     (loopback x)
-    (partition 2 1 x)
-    (mapcat #(meander rng % max-depth) x)))
+    (subdivide-with
+      (partial midpoint rng)
+      #(<= 2 (m/dist (:position %1) (:position %2)))
+      x
+      max-depth)))
 
 (defn generate-model []
   (let [seed (let [s (string/replace js/location.hash #"#" "")]
